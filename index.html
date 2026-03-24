@@ -1,0 +1,67 @@
+<script>
+    // ... existing code ...
+
+    let state = {
+        ribbits: 0,
+        totalInEvo: 0,
+        evolution: 0,
+        pads: 1,
+        clickLv: 1,
+        totems: 0,
+        mult: 1.0,
+        zenMult: 1.0,
+        evoGoal: 100,
+        zenMode: false,
+        weather: 'idle',
+        myFrogs: [],
+        currentCatch: null,
+        placingFrogId: null,
+        gameStarted: false,
+        lastTap: 0   // ← NEW: for double-tap detection
+    };
+
+    // ... rest of your functions ...
+
+    // ADD THIS NEW FUNCTION
+    function handleZenDoubleTap(e) {
+        if (!state.zenMode) return;
+
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300; // milliseconds
+
+        if (now - state.lastTap < DOUBLE_TAP_DELAY) {
+            // Double tap detected!
+            toggleZen(false);  // Return home
+            state.lastTap = 0;
+        } else {
+            state.lastTap = now;
+        }
+    }
+
+    // Update toggleZen to also handle exit detector clicks
+    function toggleZen(active) {
+        state.zenMode = active;
+        document.body.classList.toggle('zen-active', active);
+
+        if (active) {
+            document.getElementById('zen-toast').style.opacity = '1';
+            setTimeout(() => document.getElementById('zen-toast').style.opacity = '0', 3000);
+            startZenEcosystem();
+            
+            // Make sure the exit detector can receive double taps
+            const detector = document.getElementById('zen-exit-detector');
+            detector.ondblclick = handleZenDoubleTap;           // Desktop double click
+            detector.ontouchstart = handleZenDoubleTap;         // Mobile double tap
+        } else {
+            stopZenEcosystem();
+            refreshPondFrogs();
+            
+            // Clean up listeners
+            const detector = document.getElementById('zen-exit-detector');
+            detector.ondblclick = null;
+            detector.ontouchstart = null;
+        }
+        updateUI();
+    }
+
+    // ... rest of your existing script ...
