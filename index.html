@@ -170,6 +170,7 @@
             </svg>
         </button>
 
+        <!-- Placement UI -->
         <div id="placing-ui" class="fixed top-5 left-1/2 -translate-x-1/2 bg-black/80 px-8 py-4 rounded-3xl border-2 border-yellow-400 z-[3000] text-center hidden pointer-events-auto">
             <div class="text-xl font-bold text-yellow-300">PLACE NEW LILY PAD</div>
             <div class="text-sm opacity-80">Click anywhere on the pond to place it</div>
@@ -431,7 +432,10 @@
         document.getElementById('cost-click').innerText = cCost.toLocaleString();
         document.getElementById('cost-totem').innerText = tCost.toLocaleString();
 
+        // Proper disabling
         document.getElementById('btn-add-pad').disabled = state.ribbits < pCost || state.pads >= 12;
+        document.getElementById('btn-click').disabled = state.ribbits < cCost;
+        document.getElementById('btn-totem').disabled = state.ribbits < tCost;
     }
 
     function gainRibbits(amt) {
@@ -454,7 +458,7 @@
         randomizeWeather();
     }
 
-    // ==================== LILY PAD PLACEMENT (Fixed) ====================
+    // ==================== LILY PAD PLACEMENT ====================
     function buyPad() {
         const cost = Math.floor(150 * Math.pow(2.2, state.pads - 1));
         if (state.ribbits < cost || state.pads >= 12) return;
@@ -486,8 +490,8 @@
         const pad = document.createElement('div');
         pad.className = 'lily-pad';
         pad.id = `pad-${padId}`;
-        pad.style.left = (clickX - 60) + 'px';
-        pad.style.top = (clickY - 50) + 'px';
+        pad.style.left = `${clickX - 60}px`;
+        pad.style.top = `${clickY - 50}px`;
         pad.onclick = (ev) => handlePadInteraction(padId, ev);
         
         document.getElementById('main-cluster').appendChild(pad);
@@ -611,13 +615,10 @@
         }
         updateUI();
     }
-    function adminMaxEvolution() {
-        while (state.evolution < 30) evolve();
-    }
+    function adminMaxEvolution() { while (state.evolution < 30) evolve(); }
     function adminMaxTotems() { state.totems = 50; updateUI(); }
     function adminMaxClick() { state.clickLv = 30; updateUI(); }
 
-    // ==================== CORE GAME LOGIC ====================
     function handlePadInteraction(padIdx, e) {
         if (state.zenMode || !state.gameStarted || state.isPlacingPad) return;
         e.stopPropagation();
@@ -697,7 +698,7 @@
     function startPlacement(frogId) {
         state.placingFrogId = frogId;
         closeFrogMenu();
-        document.getElementById('placing-ui').style.display = 'block';
+        // IMPORTANT: Do NOT show lily pad placement UI here
         document.querySelectorAll('.lily-pad').forEach((pad, idx) => {
             const count = state.myFrogs.filter(f => f.padIndex === idx).length;
             if (count < MAX_FROGS_PER_PAD) pad.classList.add('selectable');
@@ -709,7 +710,7 @@
         const frog = state.myFrogs.find(f => f.id === state.placingFrogId);
         if(frog) {
             frog.padIndex = padIdx;
-            cancelPlacement();
+            cancelPlacement(); // This only cancels frog placement mode
             refreshPondFrogs();
             updateUI();
         }
@@ -860,16 +861,12 @@
         }
     }
 
-    // ==================== FIXED PASSIVE + WILD FROG SPAWNING ====================
     setInterval(() => {
         if (!state.gameStarted) return;
-
-        // Passive income
         let passive = state.totems * 50;
         state.myFrogs.forEach(f => { if (f.padIndex !== -1) passive += 5; });
         if (passive > 0) gainRibbits((passive * state.mult * state.zenMult) / 10);
 
-        // Wild frog spawning - now works at any score
         for (let i = 0; i < state.pads; i++) {
             const p = document.getElementById(`pad-${i}`);
             if (p && p.querySelectorAll('.frog-sprite').length === 0 && p.dataset.spawning !== 'true') {
