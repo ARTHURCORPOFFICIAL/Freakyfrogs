@@ -457,7 +457,7 @@
         randomizeWeather();
     }
 
-    // ==================== FIXED LILY PAD PLACEMENT ====================
+    // ==================== LILY PAD PLACEMENT ====================
     function buyPad() {
         const cost = Math.floor(150 * Math.pow(2.2, state.pads - 1));
         if (state.ribbits < cost || state.pads >= 12) return;
@@ -485,7 +485,7 @@
         let clickX = e.clientX - rect.left;
         let clickY = e.clientY - rect.top;
 
-        // Keep lily pad fully inside the pond
+        // Keep inside bounds
         clickX = Math.max(60, Math.min(rect.width - 60, clickX));
         clickY = Math.max(50, Math.min(rect.height - 50, clickY));
 
@@ -510,7 +510,33 @@
         document.getElementById('placing-ui').classList.add('hidden');
     }
 
-    // ==================== SAVE / LOAD / ADMIN (unchanged) ====================
+    // ==================== FROG PLACEMENT (Fixed - removes yellow border) ====================
+    function startPlacement(frogId) {
+        state.placingFrogId = frogId;
+        closeFrogMenu();
+        // Remove any leftover selectable borders
+        document.querySelectorAll('.lily-pad').forEach(p => {
+            p.classList.remove('selectable');
+            p.classList.remove('is-full');
+        });
+    }
+
+    function confirmPlacement(padIdx) {
+        const frog = state.myFrogs.find(f => f.id === state.placingFrogId);
+        if (frog) {
+            frog.padIndex = padIdx;
+            // Clean up borders
+            document.querySelectorAll('.lily-pad').forEach(p => {
+                p.classList.remove('selectable');
+                p.classList.remove('is-full');
+            });
+            state.placingFrogId = null;
+            refreshPondFrogs();
+            updateUI();
+        }
+    }
+
+    // ==================== Rest of game (save/load, admin, etc.) ====================
     function saveGame() {
         const saveData = { v: 1, r: Math.floor(state.ribbits), t: state.totalInEvo, e: state.evolution, p: state.pads, c: state.clickLv, o: state.totems, m: state.mult, g: state.evoGoal, f: state.myFrogs };
         const jsonStr = JSON.stringify(saveData);
@@ -696,27 +722,6 @@
         document.getElementById('catch-modal').style.display = 'none';
         state.currentCatch = null;
         updateUI();
-    }
-
-    function startPlacement(frogId) {
-        state.placingFrogId = frogId;
-        closeFrogMenu();
-        // Do NOT show lily pad UI here
-        document.querySelectorAll('.lily-pad').forEach((pad, idx) => {
-            const count = state.myFrogs.filter(f => f.padIndex === idx).length;
-            if (count < MAX_FROGS_PER_PAD) pad.classList.add('selectable');
-            else pad.classList.add('is-full');
-        });
-    }
-
-    function confirmPlacement(padIdx) {
-        const frog = state.myFrogs.find(f => f.id === state.placingFrogId);
-        if(frog) {
-            frog.padIndex = padIdx;
-            cancelPlacement(); // only cancels frog placement
-            refreshPondFrogs();
-            updateUI();
-        }
     }
 
     function refreshPondFrogs() {
