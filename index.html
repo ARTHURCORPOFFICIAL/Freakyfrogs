@@ -432,7 +432,6 @@
         document.getElementById('cost-click').innerText = cCost.toLocaleString();
         document.getElementById('cost-totem').innerText = tCost.toLocaleString();
 
-        // Proper disabling
         document.getElementById('btn-add-pad').disabled = state.ribbits < pCost || state.pads >= 12;
         document.getElementById('btn-click').disabled = state.ribbits < cCost;
         document.getElementById('btn-totem').disabled = state.ribbits < tCost;
@@ -458,7 +457,7 @@
         randomizeWeather();
     }
 
-    // ==================== LILY PAD PLACEMENT ====================
+    // ==================== FIXED LILY PAD PLACEMENT ====================
     function buyPad() {
         const cost = Math.floor(150 * Math.pow(2.2, state.pads - 1));
         if (state.ribbits < cost || state.pads >= 12) return;
@@ -483,8 +482,12 @@
         if (!state.isPlacingPad) return;
 
         const rect = document.getElementById('pond-container').getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
+        let clickX = e.clientX - rect.left;
+        let clickY = e.clientY - rect.top;
+
+        // Keep lily pad fully inside the pond
+        clickX = Math.max(60, Math.min(rect.width - 60, clickX));
+        clickY = Math.max(50, Math.min(rect.height - 50, clickY));
 
         const padId = state.pads;
         const pad = document.createElement('div');
@@ -507,7 +510,7 @@
         document.getElementById('placing-ui').classList.add('hidden');
     }
 
-    // ==================== SAVE / LOAD / ADMIN ====================
+    // ==================== SAVE / LOAD / ADMIN (unchanged) ====================
     function saveGame() {
         const saveData = { v: 1, r: Math.floor(state.ribbits), t: state.totalInEvo, e: state.evolution, p: state.pads, c: state.clickLv, o: state.totems, m: state.mult, g: state.evoGoal, f: state.myFrogs };
         const jsonStr = JSON.stringify(saveData);
@@ -698,7 +701,7 @@
     function startPlacement(frogId) {
         state.placingFrogId = frogId;
         closeFrogMenu();
-        // IMPORTANT: Do NOT show lily pad placement UI here
+        // Do NOT show lily pad UI here
         document.querySelectorAll('.lily-pad').forEach((pad, idx) => {
             const count = state.myFrogs.filter(f => f.padIndex === idx).length;
             if (count < MAX_FROGS_PER_PAD) pad.classList.add('selectable');
@@ -710,7 +713,7 @@
         const frog = state.myFrogs.find(f => f.id === state.placingFrogId);
         if(frog) {
             frog.padIndex = padIdx;
-            cancelPlacement(); // This only cancels frog placement mode
+            cancelPlacement(); // only cancels frog placement
             refreshPondFrogs();
             updateUI();
         }
