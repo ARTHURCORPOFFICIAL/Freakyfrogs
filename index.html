@@ -171,7 +171,6 @@
             </svg>
         </button>
 
-        <!-- Placement UI -->
         <div id="placing-ui" class="fixed top-5 left-1/2 -translate-x-1/2 bg-black/80 px-8 py-4 rounded-3xl border-2 border-yellow-400 z-[3000] text-center hidden pointer-events-auto">
             <div class="text-xl font-bold text-yellow-300">PLACE NEW LILY PAD</div>
             <div class="text-sm opacity-80">Click anywhere on the pond (away from UI)</div>
@@ -449,7 +448,8 @@
         state.evolution++;
         state.totalInEvo = 0;
         state.evoGoal = Math.floor(state.evoGoal * 2.8);
-        state.mult += 0.5 + (state.evolution * 0.2);
+        // Nerfed multiplier growth
+        state.mult += 0.3 + (state.evolution * 0.08);
         const pair = generateEvoColor(state.evolution);
         document.getElementById('pond-container').style.setProperty('--bg-top', pair[0]);
         document.getElementById('pond-container').style.setProperty('--bg-bottom', pair[1]);
@@ -458,9 +458,9 @@
         randomizeWeather();
     }
 
-    // ==================== LILY PAD PLACEMENT ====================
+    // ==================== NERFED MONEY SYSTEM ====================
     function buyPad() {
-        const cost = Math.floor(150 * Math.pow(2.2, state.pads - 1));
+        const cost = Math.floor(150 * Math.pow(2.5, state.pads - 1)); // Increased scaling
         if (state.ribbits < cost || state.pads >= 12) return;
 
         state.ribbits -= cost;
@@ -469,10 +469,20 @@
         updateUI();
     }
 
+    function buyClick() { 
+        const c = Math.floor(250 * Math.pow(1.9, state.clickLv - 1)); // Slower growth
+        if(state.ribbits >= c){ state.ribbits -= c; state.clickLv++; updateUI(); }
+    }
+
+    function buyTotem() { 
+        const c = Math.floor(5000 * Math.pow(4, state.totems)); // Much more expensive
+        if(state.ribbits >= c){ state.ribbits -= c; state.totems++; updateUI(); }
+    }
+
+    // ==================== LILY PAD PLACEMENT ====================
     function handlePondClick(e) {
         if (state.zenMode || !state.gameStarted) return;
 
-        // Only place lily pad if in placement mode and click is not on UI
         if (state.isPlacingPad && !e.target.closest('.ui-root') && !e.target.closest('#placing-ui')) {
             placeNewLilyPad(e);
             return;
@@ -511,20 +521,19 @@
         document.getElementById('placing-ui').classList.add('hidden');
     }
 
-    // ==================== SAVE / LOAD (Restored) ====================
+    function buyPad() {
+        const cost = Math.floor(150 * Math.pow(2.5, state.pads - 1));
+        if (state.ribbits < cost || state.pads >= 12) return;
+
+        state.ribbits -= cost;
+        state.isPlacingPad = true;
+        document.getElementById('placing-ui').classList.remove('hidden');
+        updateUI();
+    }
+
+    // ==================== SAVE / LOAD / ADMIN ====================
     function saveGame() {
-        const saveData = { 
-            v: 1, 
-            r: Math.floor(state.ribbits), 
-            t: state.totalInEvo, 
-            e: state.evolution, 
-            p: state.pads, 
-            c: state.clickLv, 
-            o: state.totems, 
-            m: state.mult, 
-            g: state.evoGoal, 
-            f: state.myFrogs 
-        };
+        const saveData = { v: 1, r: Math.floor(state.ribbits), t: state.totalInEvo, e: state.evolution, p: state.pads, c: state.clickLv, o: state.totems, m: state.mult, g: state.evoGoal, f: state.myFrogs };
         const jsonStr = JSON.stringify(saveData);
         const checksum = jsonStr.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 999999;
         const finalSave = jsonStr + "|" + checksum;
@@ -564,7 +573,7 @@
             const jsonStr = parts[0];
             const provided = parseInt(parts[1]);
             const calc = jsonStr.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 999999;
-            if (provided !== calc) throw new Error("Checksum failed");
+            if (provided !== calc) throw new Error();
 
             const decoded = JSON.parse(jsonStr);
             if (decoded.v !== 1) throw new Error();
@@ -603,7 +612,7 @@
             toast.style.opacity = '1';
             setTimeout(() => { toast.style.opacity = '0'; toast.textContent = "Double click / double tap anywhere to return home"; }, 3000);
         } catch (e) {
-            alert("Invalid save data! Make sure you copied the full text.");
+            alert("Invalid save data!");
         }
     }
 
@@ -865,15 +874,6 @@
         updateUI(); 
     }
 
-    function buyClick() { 
-        const c = Math.floor(250 * Math.pow(1.7, state.clickLv - 1)); 
-        if(state.ribbits >= c){ state.ribbits -= c; state.clickLv++; updateUI(); }
-    }
-    function buyTotem() { 
-        const c = Math.floor(5000 * Math.pow(3, state.totems)); 
-        if(state.ribbits >= c){ state.ribbits -= c; state.totems++; updateUI(); }
-    }
-
     function initTitleDeco() {
         const deco = document.getElementById('title-deco');
         for(let i=0; i<15; i++) {
@@ -883,20 +883,22 @@
         }
     }
 
+    // ==================== NERFED PASSIVE INCOME ====================
     setInterval(() => {
         if (!state.gameStarted) return;
-        let passive = state.totems * 50;
-        state.myFrogs.forEach(f => { if (f.padIndex !== -1) passive += 5; });
-        if (passive > 0) gainRibbits((passive * state.mult * state.zenMult) / 10);
+        // Heavily nerfed passive
+        let passive = state.totems * 8; // was 50
+        state.myFrogs.forEach(f => { if (f.padIndex !== -1) passive += 1; }); // was 5
+        if (passive > 0) gainRibbits((passive * state.mult * state.zenMult) / 20); // slower tick
 
         for (let i = 0; i < state.pads; i++) {
             const p = document.getElementById(`pad-${i}`);
             if (p && p.querySelectorAll('.frog-sprite').length === 0 && p.dataset.spawning !== 'true') {
                 p.dataset.spawning = 'true';
-                setTimeout(() => spawnWildFrog(i), 3000 + Math.random() * 7000);
+                setTimeout(() => spawnWildFrog(i), 4000 + Math.random() * 8000);
             }
         }
-    }, 100);
+    }, 150); // slower interval
 
     window.onload = () => {
         pickRandomSubtitle();
